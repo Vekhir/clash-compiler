@@ -21,7 +21,7 @@ module Clash.Explicit.Reset
   , holdReset
   , convertReset
 
-    -- Reexports
+    -- Re-exports
   , Reset
   , resetGen
   , resetGenN
@@ -99,7 +99,7 @@ import           GHC.TypeLits (type (+))
 -- === __Example 2__
 -- Similar to /Example 1/ this circuit detects a rising bit (i.e., a transition
 -- from 0 to 1) in a given argument. It takes a clock that is not stable yet and
--- a reset singal that is not synchronized to any other signals. It stabalizes
+-- a reset singal that is not synchronized to any other signals. It stabilizes
 -- the clock and then synchronizes the reset signal.
 --
 -- @

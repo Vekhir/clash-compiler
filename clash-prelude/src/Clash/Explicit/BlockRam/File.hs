@@ -429,7 +429,7 @@ blockRamFile# _ _ _ _ = error "blockRamFile#: dynamic clocks not supported"
 {-# NOINLINE blockRamFile# #-}
 {-# ANN blockRamFile# hasBlackBox #-}
 
--- | __NB:__ Not synthesizable
+-- | __NB__: Not synthesizable
 initMem :: KnownNat n => FilePath -> IO [BitVector n]
 initMem = fmap (map parseBV . lines) . readFile
   where
