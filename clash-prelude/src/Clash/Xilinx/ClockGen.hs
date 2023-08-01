@@ -11,10 +11,17 @@ PLL and other clock-related components for Xilinx FPGAs
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
-module Clash.Xilinx.ClockGen where
+module Clash.Xilinx.ClockGen
+  ( unsafeClockWizard
+  , unsafeClockWizardDifferential
+    -- ** Deprecated
+  , clockWizard
+  , clockWizardDifferential
+  ) where
 
 import Clash.Annotations.Primitive (hasBlackBox)
 import Clash.Clocks (clocks)
+import Clash.Magic (setName)
 import Clash.Promoted.Symbol (SSymbol)
 import Clash.Signal.Internal
 
@@ -32,24 +39,55 @@ import Clash.Signal.Internal
 -- @
 --
 -- See also the [Clocking Wizard LogiCORE IP Product Guide](https://docs.xilinx.com/r/en-US/pg065-clk-wiz)
-clockWizard
-  :: forall domIn domOut name
-   . ( KnownDomain domIn
-     , KnownDomain domOut )
-  => SSymbol name
-  -- ^ Name of the component instance
+clockWizard ::
+  forall domIn domOut name .
+  ( KnownDomain domIn
+  , KnownDomain domOut
+  ) =>
+  -- | Name of the component instance
   --
   -- Instantiate as follows: @(SSymbol \@\"clockWizard50\")@
-  -> Clock domIn
-  -- ^ Free running clock (i.e. a clock pin connected to a crystal)
-  -> Reset domIn
-  -- ^ Reset for the PLL
-  -> (Clock domOut, Signal domOut Bool)
-  -- ^ (Stable PLL clock, PLL lock)
-clockWizard !_ = clocks
+  SSymbol name ->
+  -- | Free running clock (i.e. a clock pin connected to a crystal)
+  Clock domIn ->
+  -- | Reset for the PLL
+  Reset domIn ->
+  -- | (Stable PLL clock, PLL lock)
+  (Clock domOut, Signal domOut Bool)
+clockWizard _ = setName @name unsafeClockWizard
+{-# INLINE clockWizard #-}
+{-# DEPRECATED clockWizard "This function is unsafe. Please see documentation of the function for alternatives." #-}
+
+-- | A clock source that corresponds to the Xilinx MMCM component created
+-- with the \"Clock Wizard\" with settings to provide a stable 'Clock' from
+-- a single free-running clock input.
+--
+-- You can use type applications to specify the output clock domain, e.g.:
+--
+-- @
+-- createDomain vXilinxSystem{vName=\"Dom100MHz\", vPeriod=10000}
+--
+-- -- Outputs a clock running at 100 MHz
+-- clockWizard \@_ \@Dom100MHz (SSymbol \@\"clkWizard50to100\") clk50 rst
+-- @
+--
+-- See also the [Clocking Wizard LogiCORE IP Product Guide](https://docs.xilinx.com/r/en-US/pg065-clk-wiz)
+unsafeClockWizard ::
+  forall domIn domOut pllLock .
+  ( KnownDomain domIn
+  , KnownDomain domOut
+  , KnownDomain pllLock
+  ) =>
+  -- | Free running clock (i.e. a clock pin connected to a crystal)
+  Clock domIn ->
+  -- | Reset for the PLL
+  Reset domIn ->
+  -- | (Stable PLL clock, PLL lock)
+  (Clock domOut, Signal pllLock Bool)
+unsafeClockWizard = clocks
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# CLASH_OPAQUE clockWizard #-}
-{-# ANN clockWizard hasBlackBox #-}
+{-# CLASH_OPAQUE unsafeClockWizard #-}
+{-# ANN unsafeClockWizard hasBlackBox #-}
 
 -- | A clock source that corresponds to the Xilinx MMCM component created
 -- with the \"Clock Wizard\", with settings to provide a stable 'Clock'
@@ -65,21 +103,52 @@ clockWizard !_ = clocks
 -- @
 --
 -- See also the [Clocking Wizard LogiCORE IP Product Guide](https://docs.xilinx.com/r/en-US/pg065-clk-wiz)
-clockWizardDifferential
-  :: forall domIn domOut name
-   . ( KnownDomain domIn
-     , KnownDomain domOut )
-  => SSymbol name
-  -- ^ Name of the component instance
+clockWizardDifferential ::
+  forall domIn domOut name .
+  ( KnownDomain domIn
+  , KnownDomain domOut
+  ) =>
+  -- | Name of the component instance
   --
   -- Instantiate as follows: @(SSymbol \@\"clockWizardD50\")@
-  -> DiffClock domIn
-  -- ^ Free running clock
-  -> Reset domIn
-  -- ^ Reset for the PLL
-  -> (Clock domOut, Signal domOut Bool)
-  -- ^ (Stable PLL clock, PLL lock)
-clockWizardDifferential !_ (DiffClock clk _) = clocks clk
+  SSymbol name ->
+  -- | Free running clock
+  DiffClock domIn ->
+  -- | Reset for the PLL
+  Reset domIn ->
+  -- | (Stable PLL clock, PLL lock)
+  (Clock domOut, Signal domOut Bool)
+clockWizardDifferential _ = setName @name unsafeClockWizardDifferential
+{-# INLINE clockWizardDifferential #-}
+{-# DEPRECATED clockWizardDifferential "This function is unsafe. Please see documentation of the function for alternatives." #-}
+
+-- | A clock source that corresponds to the Xilinx MMCM component created
+-- with the \"Clock Wizard\", with settings to provide a stable 'Clock'
+-- from a free-running differential clock input.
+--
+-- You can use type applications to specify the output clock domain, e.g.:
+--
+-- @
+-- createDomain vXilinxSystem{vName=\"Dom100MHz\", vPeriod=10000}
+--
+-- -- Outputs a clock running at 100 MHz
+-- clockWizardDifferential \@_ \@Dom100MHz (SSymbol \@\"clkWizard50to100\") clk50 rst
+-- @
+--
+-- See also the [Clocking Wizard LogiCORE IP Product Guide](https://docs.xilinx.com/r/en-US/pg065-clk-wiz)
+unsafeClockWizardDifferential ::
+  forall domIn domOut pllLock .
+  ( KnownDomain domIn
+  , KnownDomain domOut
+  , KnownDomain pllLock
+  ) =>
+  -- | Free running clock
+  DiffClock domIn ->
+  -- | Reset for the PLL
+  Reset domIn ->
+  -- | (Stable PLL clock, PLL lock)
+  (Clock domOut, Signal pllLock Bool)
+unsafeClockWizardDifferential (DiffClock clk _) = clocks clk
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
-{-# CLASH_OPAQUE clockWizardDifferential #-}
-{-# ANN clockWizardDifferential hasBlackBox #-}
+{-# CLASH_OPAQUE unsafeClockWizardDifferential #-}
+{-# ANN unsafeClockWizardDifferential hasBlackBox #-}

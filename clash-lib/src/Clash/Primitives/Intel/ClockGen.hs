@@ -15,7 +15,6 @@
 module Clash.Primitives.Intel.ClockGen where
 
 import Clash.Backend
-import Clash.Netlist.BlackBox.Util
 import qualified Clash.Netlist.Id as Id
 import Clash.Netlist.Types
 import Clash.Netlist.Util
@@ -24,6 +23,7 @@ import Clash.Signal (periodToHz)
 
 import Control.Monad.State
 import Data.List.Infinite (Infinite(..), (...))
+import Data.Maybe (fromMaybe)
 import qualified Data.String.Interpolate as I
 import Data.Text.Prettyprint.Doc.Extra
 import qualified Prettyprinter.Interpolate as I
@@ -37,15 +37,13 @@ altpllTF = TemplateFunction used valid altpllTemplate
  where
   knownDomIn
     :< _knownDomOut
-    :< nm
+    :< _knownDomLock
     :< clk
     :< rst
     :< _ = (0...)
-  used = [ knownDomIn, nm, clk, rst ]
+  used = [ knownDomIn, clk, rst ]
   valid bbCtx
-    | (nm0,_,_) <- bbInputs bbCtx !! nm
-    , Just _ <- exprToString nm0
-    , [(_,Product {})] <- bbResults bbCtx
+    | [(_,Product {})] <- bbResults bbCtx
     = True
   valid _ = False
 
@@ -54,7 +52,7 @@ altpllQsysTF = TemplateFunction used valid altpllQsysTemplate
  where
   knownDomIn
     :< knownDomOut
-    :< _name
+    :< _knownDomLock
     :< _clk
     :< _rst
     :< _ = (0...)
@@ -67,15 +65,12 @@ alteraPllTF = TemplateFunction used valid alteraPllTemplate
   _clocksClass
     :< knownDomIn
     :< _clocksCxt
-    :< nm
     :< clk
     :< rst
     :< _ = (0...)
-  used = [ knownDomIn, nm, clk, rst ]
+  used = [ knownDomIn, clk, rst ]
   valid bbCtx
-    | (nm0,_,_) <- bbInputs bbCtx !! nm
-    , Just _ <- exprToString nm0
-    , [(_,Product {})] <- bbResults bbCtx
+    | [(_,Product {})] <- bbResults bbCtx
     = True
   valid _ = False
 
@@ -85,7 +80,6 @@ alteraPllQsysTF = TemplateFunction used valid alteraPllQsysTemplate
   _clocksClass
     :< knownDomIn
     :< clocksCxt
-    :< _name
     :< _clk
     :< _rst
     :< _ = (0...)
@@ -101,16 +95,14 @@ alteraPllTemplate bbCtx
   | [ _clocksClass
     , knownDomIn
     , _clocksCxt
-    , name0
     , clk
     , rst
     ] <- map fst (DSL.tInputs bbCtx)
-  , Just name1 <- DSL.getStr name0
   , [DSL.ety -> resultTy] <- DSL.tResults bbCtx
   , Product _ _ (init -> pllOutTys) <- resultTy
   , [compName] <- bbQsysIncName bbCtx
   = do
-      instName <- Id.makeBasic $ TextS.pack name1
+      instName <- Id.makeBasic $ fromMaybe "altera_pll" $ bbCtxName bbCtx
 
       -- TODO: unsafeMake is dubious here: I don't think we take names in
       -- TODO: bbQsysIncName into account when generating fresh ids
@@ -151,16 +143,15 @@ altpllTemplate
 altpllTemplate bbCtx
   | [ knownDomIn
     , _knownDomOut
-    , name0
+    , _knownDomLock
     , clk
     , rst
     ] <- map fst (DSL.tInputs bbCtx)
-  , Just name1 <- DSL.getStr name0
   , [DSL.ety -> resultTy] <- DSL.tResults bbCtx
   , Product _ _ (pllOutTy:_) <- resultTy
   , [compName] <- bbQsysIncName bbCtx
   = do
-      instName <- Id.makeBasic $ TextS.pack name1
+      instName <- Id.makeBasic $ fromMaybe "altpll" $ bbCtxName bbCtx
 
       -- TODO: unsafeMake is dubious here: I don't think we take names in
       -- TODO: bbQsysIncName into account when generating fresh ids
