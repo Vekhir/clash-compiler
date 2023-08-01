@@ -11,19 +11,24 @@ PLL and other clock-related components for Xilinx FPGAs
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 
-module Clash.Xilinx.ClockGen
-  ( unsafeClockWizard
-  , unsafeClockWizardDifferential
-    -- ** Deprecated
-  , clockWizard
-  , clockWizardDifferential
-  ) where
+module Clash.Xilinx.ClockGen where
 
 import Clash.Annotations.Primitive (hasBlackBox)
-import Clash.Clocks (clocks)
+import Clash.Clocks (clocks, clocksResetSynchronizer)
 import Clash.Magic (setName)
-import Clash.Promoted.Symbol (SSymbol)
+import Clash.Promoted.Symbol (SSymbol(..))
 import Clash.Signal.Internal
+
+clockWizardSync ::
+  forall domIn domOut .
+  ( KnownDomain domIn
+  , KnownDomain domOut
+  ) =>
+  Clock domIn ->
+  Reset domIn ->
+  (Clock domOut, Reset domOut)
+clockWizardSync clkIn rstIn =
+  clocksResetSynchronizer (unsafeClockWizard clkIn rstIn) clkIn
 
 -- | A clock source that corresponds to the Xilinx MMCM component created
 -- with the \"Clock Wizard\" with settings to provide a stable 'Clock' from
@@ -62,6 +67,7 @@ clockWizard _ = setName @name unsafeClockWizard
 -- with the \"Clock Wizard\" with settings to provide a stable 'Clock' from
 -- a single free-running clock input.
 --
+-- Generates Tcl according to Clash\<-\>Tcl API
 -- You can use type applications to specify the output clock domain, e.g.:
 --
 -- @
@@ -88,6 +94,17 @@ unsafeClockWizard = clocks
 -- See: https://github.com/clash-lang/clash-compiler/pull/2511
 {-# CLASH_OPAQUE unsafeClockWizard #-}
 {-# ANN unsafeClockWizard hasBlackBox #-}
+
+clockWizardDifferentialSync ::
+  forall domIn domOut .
+  ( KnownDomain domIn
+  , KnownDomain domOut
+  ) =>
+  DiffClock domIn ->
+  Reset domIn ->
+  (Clock domOut, Reset domOut)
+clockWizardDifferentialSync clkIn@(DiffClock clkInP _) rstIn =
+  clocksResetSynchronizer (unsafeClockWizardDifferential clkIn rstIn) clkInP
 
 -- | A clock source that corresponds to the Xilinx MMCM component created
 -- with the \"Clock Wizard\", with settings to provide a stable 'Clock'
