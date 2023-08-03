@@ -1,0 +1,3 @@
+FIXED: `altpll` and `alteraPll` in `Clash.Intel.ClockGen` now account for the input domain's `ResetPolarity`. Before this fix, the reset was always interpreted as an active-high signal.
+
+INTERNAL NEW: `Clash.Primitives.DSL.declareN`, a companion to `declare` which declares multiple signals in one go.
